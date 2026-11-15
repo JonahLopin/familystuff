@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Family Stuff</title>
+<style>
+  :root { --bg:#faf7f0; --card:#fff; --ink:#1d1b16; --muted:#6b665b; --line:#e4ddcc; --accent:#b8860b; --err:#b3261e; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16140f; --card:#211e17; --ink:#f1ece0; --muted:#a39d8f; --line:#3a352a; --accent:#e0b040; --err:#f2b8b5; } }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; display:grid; place-items:center; padding:16px; background:var(--bg); color:var(--ink);
+         font:16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  form { width:100%; max-width:360px; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:28px; }
+  h1 { margin:0 0 4px; font-size:22px; }
+  p { margin:0 0 18px; color:var(--muted); font-size:14px; }
+  input { width:100%; padding:10px 12px; font:inherit; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--ink); }
+  input:focus { outline:2px solid var(--accent); outline-offset:1px; }
+  button { margin-top:12px; width:100%; padding:10px; font:inherit; font-weight:600; border:0; border-radius:8px; background:var(--accent); color:#1d1b16; cursor:pointer; }
+  button:disabled { opacity:.6; cursor:wait; }
+  .err { color:var(--err); font-size:14px; min-height:21px; margin:10px 0 0; }
+</style>
+</head>
+<body>
+<form id="gate" autocomplete="off">
+  <h1>Family Stuff</h1>
+  <p>This page is password protected.</p>
+  <input id="pw" type="password" placeholder="Password" aria-label="Password" autofocus required>
+  <button id="go" type="submit">Open</button>
+  <div class="err" id="err" role="alert"></div>
+</form>
+<script id="payload" type="application/json">__PAYLOAD__</script>
+<script>
+(function () {
+  var P = JSON.parse(document.getElementById('payload').textContent);
+  var KEY = 'familystuff-pw';
+  function bytes(b64) { var s = atob(b64), u = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; }
+  async function unlock(pw) {
+    var base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
+    var key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: bytes(P.salt), iterations: P.iter, hash: 'SHA-256' },
+      base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+    var plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: bytes(P.iv) }, key, bytes(P.ct));
+    return new TextDecoder().decode(plain);
+  }
+  function show(html) { document.open(); document.write(html); document.close(); }
+  var form = document.getElementById('gate'), go = document.getElementById('go'), err = document.getElementById('err');
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var pw = document.getElementById('pw').value;
+    go.disabled = true; err.textContent = '';
+    try {
+      var html = await unlock(pw);
+      try { localStorage.setItem(KEY, pw); } catch (_) {}
+      show(html);
+    } catch (_) {
+      err.textContent = 'Wrong password.'; go.disabled = false;
+    }
+  });
+  var saved = null;
+  try { saved = localStorage.getItem(KEY); } catch (_) {}
+  if (saved) unlock(saved).then(show, function () { try { localStorage.removeItem(KEY); } catch (_) {} });
+})();
+</script>
+</body>
+</html>
