@@ -5,7 +5,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { webcrypto as crypto } from 'node:crypto';
 
-const PAGES = { 'src/hub.html': 'index.html', 'src/eggs.html': 'eggs/index.html' };
+const PAGES = { 'src/hub.html': 'index.html', 'src/eggs.html': 'eggs/index.html', 'src/couch.html': 'couch/index.html' };
 const password = process.argv[2];
 if (!password) { console.error('usage: node encrypt.mjs <password>'); process.exit(1); }
 const ITER = 600000;
